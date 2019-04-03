@@ -15,7 +15,7 @@ void CSMain(uint3 DTid : SV_DispatchThreadID)
 {
 	if (DTid.x + DTid.y + DTid.z == 0)
 	{
-		argBuffer[0] = 36;
+		argBuffer[0] = 324;
 		argBuffer[1] = 0;
 		argBuffer[2] = 0;
 		argBuffer[3] = 0;
