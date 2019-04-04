@@ -3,11 +3,11 @@
 
 RWBuffer<uint> argBuffer;
 AppendStructuredBuffer < uint3 > perInstancePosition;
-Texture3D<float4> voxelGrids;
+Texture3D<int> voxelGrids;
 
 float4 convRGBA8Tofloat4(uint val)
 {
-	return float4(float((val & 0x000000FF)), float((val & 0x0000FF00) >> 8U), float((val & 0x00FF0000) >> 16U), float((val & 0xFF000000) >> 24U));
+	return float4(float((val & 0x000000FF)), float((val & 0x0000FF00) >> 8U), float((val & 0x00FF0000) >> 16U), float((val & 0xFF000000) >> 24U)) / 255.0f;
 }
 
 [numthreads(16, 8, 1)]
@@ -15,7 +15,7 @@ void CSMain(uint3 DTid : SV_DispatchThreadID)
 {
 	if (DTid.x + DTid.y + DTid.z == 0)
 	{
-		argBuffer[0] = 324;
+		argBuffer[0] = 132;
 		argBuffer[1] = 0;
 		argBuffer[2] = 0;
 		argBuffer[3] = 0;
@@ -24,7 +24,7 @@ void CSMain(uint3 DTid : SV_DispatchThreadID)
 	GroupMemoryBarrier();
 
 	uint3 voxelPos = uint3(DTid.x, DTid.y, DTid.z);
-	float4 voxelValue = voxelGrids.Load(uint4(voxelPos, 0));
+	float4 voxelValue = convRGBA8Tofloat4(uint(voxelGrids.Load(uint4(voxelPos, 0))));
 
 	if (voxelValue.a > 0.0f)
 	{

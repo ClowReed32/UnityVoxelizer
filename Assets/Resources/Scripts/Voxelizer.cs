@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class Voxelizer : MonoBehaviour
 {
-	public int size = 256;
+	public int size = 128;
 
 	public RenderTexture voxelizedAlbedo;
 	public RenderTexture voxelizedMetallicSmoothness;
@@ -43,14 +43,14 @@ public class Voxelizer : MonoBehaviour
 
 	void createVoxelBuffer()
 	{
-		voxelizedAlbedo = new RenderTexture(size, size, 0, RenderTextureFormat.ARGB32);
+		voxelizedAlbedo = new RenderTexture(size, size, 0, RenderTextureFormat.RInt);
 		voxelizedAlbedo.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
 		voxelizedAlbedo.volumeDepth = size;
 		voxelizedAlbedo.enableRandomWrite = true;
 		voxelizedAlbedo.Create();
 		voxelizedAlbedo.filterMode = FilterMode.Point;
 
-		voxelizedMetallicSmoothness = new RenderTexture(size, size, 0, RenderTextureFormat.ARGB32);
+		voxelizedMetallicSmoothness = new RenderTexture(size, size, 0, RenderTextureFormat.RInt);
 		voxelizedMetallicSmoothness.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
 		voxelizedMetallicSmoothness.volumeDepth = size;
 		voxelizedMetallicSmoothness.enableRandomWrite = true;
@@ -60,7 +60,7 @@ public class Voxelizer : MonoBehaviour
 
 	void createBevelCubeMesh()
 	{
-		var meshFilter = Resources.Load<MeshFilter>("Meshes/voxel_cube");
+		var meshFilter = Resources.Load<MeshFilter>("Meshes/voxels/03_1_m");
 		this.cube = meshFilter.sharedMesh;
 	}
 
@@ -133,8 +133,20 @@ public class Voxelizer : MonoBehaviour
 	void obtainMeshes()
 	{
 		MeshFilter[] meshes = FindObjectsOfType<MeshFilter>();
+		SkinnedMeshRenderer[] skinnedMeshes = FindObjectsOfType<SkinnedMeshRenderer>();
 
 		foreach (var mesh in meshes)
+		{
+			var renderer = mesh.gameObject.GetComponent<Renderer>();
+
+			if (renderer && renderer.enabled && gridBounds.Intersects(renderer.bounds))
+			{
+				renderer.enabled = false;
+				sceneObjects.Add(mesh.gameObject);
+			}
+		}
+
+		foreach (var mesh in skinnedMeshes)
 		{
 			var renderer = mesh.gameObject.GetComponent<Renderer>();
 
@@ -175,7 +187,8 @@ public class Voxelizer : MonoBehaviour
 	void clearVoxelizedScene()
 	{
 		clearCompute.SetVector("clearColor", new Vector4(0.0f, 0.0f, 0.0f, 0.0f));
-		clearCompute.SetTexture(clearKernelIndex, "output", voxelizedAlbedo);
+		clearCompute.SetTexture(clearKernelIndex, "output0", voxelizedAlbedo);
+		clearCompute.SetTexture(clearKernelIndex, "output1", voxelizedMetallicSmoothness);
 
 		uint x, y, z;
 		clearCompute.GetKernelThreadGroupSizes(clearKernelIndex, out x, out y, out z);
@@ -194,28 +207,53 @@ public class Voxelizer : MonoBehaviour
 
 		foreach(var voxelizedObject in sceneObjects)
 		{
-			var materials = voxelizedObject.GetComponent<Renderer>().materials;
-			var mesh = voxelizedObject.GetComponent<MeshFilter>().mesh;
+			var renderer = voxelizedObject.GetComponent<Renderer>();
+			var materials = renderer.materials;
+
+			Mesh mesh = null;
+
+			if(renderer is SkinnedMeshRenderer)
+			{
+				mesh = ((SkinnedMeshRenderer)renderer).sharedMesh;
+			}
+			else
+			{
+				mesh = voxelizedObject.GetComponent<MeshFilter>().mesh;
+			}
+			
 			int index = 0;
 
-			foreach(var material in materials)
+			if(mesh)
 			{
-				voxelizerMaterial.SetVector("_albedo", material.GetColor("_Color"));
-				voxelizerMaterial.SetFloat("_metallic", material.GetFloat("_Metallic"));
-				voxelizerMaterial.SetFloat("_smoothness", material.GetFloat("_Glossiness"));
+				foreach (var material in materials)
+				{
+					voxelizerMaterial.SetVector("_albedo", material.GetColor("_Color"));
+					voxelizerMaterial.SetFloat("_metallic", material.GetFloat("_Metallic"));
+					voxelizerMaterial.SetFloat("_smoothness", material.GetFloat("_Glossiness"));
 
-				var mainTex = material.GetTexture("_MainTex");
-				var metallicGlossMap = material.GetTexture("_MetallicGlossMap");
+					Texture mainTex = material.GetTexture("_MainTex");
+					Texture metallicGlossMap = material.GetTexture("_MetallicGlossMap");
 
-				voxelizerMaterial.SetInt("_useAlbedoMap", mainTex != null ? 1 : 0);
-				voxelizerMaterial.SetInt("_useMetallicGlossMap", metallicGlossMap != null ? 1 : 0);
-				voxelizerMaterial.SetTexture("_mainAlbedo", mainTex);
-				voxelizerMaterial.SetTexture("_metallicGlossMap", metallicGlossMap);
+					voxelizerMaterial.SetInt("_useAlbedoMap", mainTex != null ? 1 : 0);
+					voxelizerMaterial.SetInt("_useMetallicGlossMap", metallicGlossMap != null ? 1 : 0);
 
-				voxelizerMaterial.SetPass(0);
+					if (mainTex)
+					{
+						mainTex.filterMode = FilterMode.Point;
+						voxelizerMaterial.SetTexture("_mainAlbedo", mainTex);
+					}
 
-				Graphics.DrawMeshNow(mesh, voxelizedObject.transform.localToWorldMatrix, index++);
-			}
+					if (metallicGlossMap)
+					{
+						metallicGlossMap.filterMode = FilterMode.Point;
+						voxelizerMaterial.SetTexture("_metallicGlossMap", metallicGlossMap);
+					}
+
+					voxelizerMaterial.SetPass(0);
+
+					Graphics.DrawMeshNow(mesh, voxelizedObject.transform.localToWorldMatrix, index++);
+				}
+			}			
 		}		
 
 		Graphics.ClearRandomWriteTargets();

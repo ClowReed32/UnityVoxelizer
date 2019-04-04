@@ -1,10 +1,12 @@
 ﻿#pragma kernel CSMain
 
-RWTexture3D<float4> output;
+RWTexture3D<int> output0;
+RWTexture3D<int> output1;
 float4 clearColor;
 
 [numthreads(8,8,8)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
-	output[id.xyz] = clearColor;
+	output0[id.xyz] = 0;
+	output1[id.xyz] = 0;
 }

@@ -48,8 +48,8 @@
 
 			float4x4 _worldToUnitCube;
 
-			RWTexture3D<float4> _voxelizedAlbedo : register(u1);
-			RWTexture3D<float4> _voxelizedMetallicSmoothness : register(u2);
+			RWTexture3D<int> _voxelizedAlbedo : register(u1);
+			RWTexture3D<int> _voxelizedMetallicSmoothness : register(u2);
 
 			float4 _albedo;
 			float _metallic;
@@ -145,6 +145,21 @@
 				outputStream.RestartStrip();
 			}
 
+			uint convfloat4ToRGBA8(float4 val)
+			{
+				val *= 255.0f;
+				return (uint(val.w) & 0x000000FF) << 24U | (uint(val.z) & 0x000000FF) << 16U | (uint(val.y) & 0x000000FF) << 8U | (uint(val.x) & 0x000000FF);
+			}
+
+			void imageAtomicRGBA8(RWTexture3D<int> tex, int3 coords, float4 newVal)
+			{
+				uint newValU = convfloat4ToRGBA8(newVal);
+				uint lastValU = 0;
+				uint currValU;
+
+				InterlockedMax(tex[coords], newValU, currValU);
+			}
+
 			void frag(PsInput input)
 			{
 				int x, y, z;
@@ -170,8 +185,11 @@
 					metallic = sampleSM.r;
 				}
 
-				_voxelizedAlbedo[voxelPos] = float4(albedo, 1.0f);
-				_voxelizedMetallicSmoothness[voxelPos] = float4(metallic, smoothness, 0.0f, 1.0f);
+				/*_voxelizedAlbedo[voxelPos] = int(convfloat4ToRGBA8(float4(albedo, 1.0f)));
+				_voxelizedMetallicSmoothness[voxelPos] = int(convfloat4ToRGBA8(float4(metallic, smoothness, 0.0f, 1.0f)));*/
+
+				imageAtomicRGBA8(_voxelizedAlbedo, voxelPos, float4(albedo, 1.0f));
+				imageAtomicRGBA8(_voxelizedMetallicSmoothness, voxelPos, float4(metallic, smoothness, 0.0f, 1.0f));
 			}
 			ENDCG
 		}

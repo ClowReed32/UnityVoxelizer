@@ -56,8 +56,8 @@
 			};
 
 			StructuredBuffer< uint3 > voxelPositions;
-			Texture3D<float4> voxelizedAlbedo;
-			Texture3D<float4> voxelizedMetallicSmothness;
+			Texture3D<int> voxelizedAlbedo;
+			Texture3D<int> voxelizedMetallicSmothness;
 
 			float voxelSize;
 			float4 gridOffset;
@@ -79,6 +79,11 @@
 
                 return output;
             }
+
+			float4 convRGBA8Tofloat4(uint val)
+			{
+				return float4(float((val & 0x000000FF)), float((val & 0x0000FF00) >> 8U), float((val & 0x00FF0000) >> 16U), float((val & 0xFF000000) >> 24U)) / 255.0f;
+			}
 
 			inline UnityGI FragmentGI(FragmentCommonData s, half occlusion, half4 i_ambientOrLightmapUV, half atten, UnityLight light, bool reflections)
 			{
@@ -128,8 +133,8 @@
             {
 				PsOut output;
 
-				float4 albedo = voxelizedAlbedo[input.voxelPosition];
-				float4 metallicSmoothness = voxelizedMetallicSmothness[input.voxelPosition];
+				float4 albedo = convRGBA8Tofloat4(uint(voxelizedAlbedo[input.voxelPosition]));
+				float4 metallicSmoothness = convRGBA8Tofloat4(uint(voxelizedMetallicSmothness[input.voxelPosition]));
 
 				float3 specularColor;
 				float oneMinusReflectivity;
