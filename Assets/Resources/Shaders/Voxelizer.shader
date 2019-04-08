@@ -69,7 +69,7 @@
 				int index = _triangles[id];
 				float3 vertexPosition_modelspace = _positions[index];
 				float3 vertexNormal_modelspace = _normals[index];
-				float2 vertexUV_modelspace = _useUvs == 1 _uvs[index] ? : 0.0f;
+				float2 vertexUV_modelspace = _useUvs == 1 ? _uvs[index] : 0.0f;
 
 				output.vertexPosition_worldspace = mul(_objectToWorld, float4(vertexPosition_modelspace, 1.0f));
 				output.vertexPosition_unitcube = mul(_worldToUnitCube, float4(output.vertexPosition_worldspace, 1.0f));

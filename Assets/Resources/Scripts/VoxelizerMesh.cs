@@ -70,7 +70,7 @@ public class VoxelizerMesh
 			mat.SetBuffer("_uvs", uvs);
 		}	
 
-		mat.SetBuffer("_triangles", positions);
+		mat.SetBuffer("_triangles", triangles);
 
 		mat.SetPass(0);
 
