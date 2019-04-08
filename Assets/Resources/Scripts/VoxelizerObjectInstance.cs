@@ -7,6 +7,7 @@ public class VoxelizerObjectInstance
 	private GameObject gameObject;
 	private VoxelizerMesh mesh;
 	private Material[] materials;
+	private Animator animator;
 
 	public VoxelizerObjectInstance(GameObject gameObject)
 	{
@@ -23,6 +24,7 @@ public class VoxelizerObjectInstance
 		else if(skinnedMesh)
 		{
 			this.mesh = VoxelizerMeshLibray.getMesh(skinnedMesh.sharedMesh);
+			this.animator = gameObject.GetComponentInParent<Animator>();			
 		}
 		else
 		{
@@ -30,9 +32,27 @@ public class VoxelizerObjectInstance
 		}
 	}
 
+	public Transform[] getCurrentAnimatorTransform()
+	{
+		if(animator)
+		{
+			Transform[] transforms = animator.gameObject.GetComponentsInChildren<Transform>();
+			return transforms;
+		}
+
+		return null;
+	}
+
 	public void Render(Material mat)
 	{
 		mat.SetMatrix("_objectToWorld", gameObject.transform.localToWorldMatrix);
+
+		Transform[] boneTransforms = getCurrentAnimatorTransform();
+
+		if(boneTransforms != null)
+		{
+			Debug.Log(boneTransforms[0].localToWorldMatrix);
+		}
 
 		foreach (var material in materials)
 		{

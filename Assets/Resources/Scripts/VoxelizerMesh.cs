@@ -11,6 +11,9 @@ public class VoxelizerMesh
 	private ComputeBuffer blendIndexes = null;
 	private ComputeBuffer triangles = null;
 
+	private ComputeBuffer skinnedPositions = null;
+	private ComputeBuffer skinnedNormals = null;
+
 	public VoxelizerMesh(Mesh mesh)
 	{
 		positions = new ComputeBuffer(mesh.vertexCount, 3 * sizeof(float), ComputeBufferType.Default);
@@ -52,10 +55,17 @@ public class VoxelizerMesh
 
 			blendIndexes = new ComputeBuffer(mesh.boneWeights.Length, 4 * sizeof(int), ComputeBufferType.Default);
 			blendIndexes.SetData(boneIndexes);
+
+			skinnedPositions = new ComputeBuffer(mesh.vertices.Length, 3 * sizeof(float), ComputeBufferType.Default);
+			skinnedNormals = new ComputeBuffer(mesh.normals.Length, 3 * sizeof(float), ComputeBufferType.Default);
 		}
 
 		triangles = new ComputeBuffer(mesh.triangles.Length, sizeof(int), ComputeBufferType.Default);
 		triangles.SetData(mesh.triangles);
+	}
+
+	public void computeAnimationSkinning()
+	{
 	}
 
 	public void Render(Material mat)
@@ -102,5 +112,13 @@ public class VoxelizerMesh
 		if (triangles != null)
 			triangles.Release();
 		triangles = null;
+
+		if (skinnedPositions != null)
+			skinnedPositions.Release();
+		skinnedPositions = null;
+
+		if (skinnedNormals != null)
+			skinnedNormals.Release();
+		skinnedNormals = null;
 	}
 }
