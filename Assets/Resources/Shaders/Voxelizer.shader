@@ -22,13 +22,6 @@
 
 			#include "UnityCG.cginc"
 
-			struct VsInput
-			{
-				float3 vertexPosition_modelspace : Position;
-				float3 vertexNormal_modelspace	 : Normal;
-				float2 vertexUV_modelspace		 : TexCoord;
-			};
-
 			struct GsInput
 			{
 				float3 vertexNormal_worldspace   : Normal;
@@ -47,6 +40,7 @@
 			};
 
 			float4x4 _worldToUnitCube;
+			float4x4 _objectToWorld;
 
 			RWTexture3D<int> _voxelizedAlbedo : register(u1);
 			RWTexture3D<int> _voxelizedMetallicSmoothness : register(u2);
@@ -62,13 +56,25 @@
 			SamplerState sampler_mainAlbedo;
 			SamplerState sampler_metallicGlossMap;
 
-			GsInput vert(VsInput input)
+			StructuredBuffer<float3> _positions;
+			StructuredBuffer<float3> _normals;
+			StructuredBuffer<float2> _uvs;
+			int _useUvs;
+			StructuredBuffer<int> _triangles;
+
+			GsInput vert(uint id : SV_VertexID)
 			{
 				GsInput output;
-				output.vertexPosition_worldspace = mul(unity_ObjectToWorld, float4(input.vertexPosition_modelspace, 1.0f));
+
+				int index = _triangles[id];
+				float3 vertexPosition_modelspace = _positions[index];
+				float3 vertexNormal_modelspace = _normals[index];
+				float2 vertexUV_modelspace = _useUvs == 1 _uvs[index] ? : 0.0f;
+
+				output.vertexPosition_worldspace = mul(_objectToWorld, float4(vertexPosition_modelspace, 1.0f));
 				output.vertexPosition_unitcube = mul(_worldToUnitCube, float4(output.vertexPosition_worldspace, 1.0f));
-				output.vertexNormal_worldspace = mul(unity_ObjectToWorld, float4(input.vertexNormal_modelspace, 0.0f));
-				output.vertexUV = input.vertexUV_modelspace;
+				output.vertexNormal_worldspace = mul(unity_ObjectToWorld, float4(vertexNormal_modelspace, 0.0f));
+				output.vertexUV = vertexUV_modelspace;
 				return output;
 			}
 

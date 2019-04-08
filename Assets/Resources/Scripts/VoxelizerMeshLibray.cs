@@ -22,4 +22,12 @@ public class VoxelizerMeshLibray
 
 		return mesh;
 	}
+
+	public static void release()
+	{
+		foreach(var mesh in meshDictionary)
+		{
+			mesh.Value.Release();
+		}
+	}
 }

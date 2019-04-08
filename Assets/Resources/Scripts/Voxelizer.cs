@@ -30,6 +30,7 @@ public class Voxelizer : MonoBehaviour
 	private Mesh cube;
 
 	private List<GameObject> sceneObjects = new List<GameObject>();
+	private List<VoxelizerObjectInstance> voxelizerSceneObjects = new List<VoxelizerObjectInstance>();
 
 	void computeWorldToUnitCubeMatrix()
 	{
@@ -142,6 +143,7 @@ public class Voxelizer : MonoBehaviour
 			if (renderer && renderer.enabled && gridBounds.Intersects(renderer.bounds))
 			{
 				renderer.enabled = false;
+				voxelizerSceneObjects.Add(new VoxelizerObjectInstance(mesh.gameObject));
 				sceneObjects.Add(mesh.gameObject);
 			}
 		}
@@ -153,6 +155,7 @@ public class Voxelizer : MonoBehaviour
 			if (renderer && renderer.enabled && gridBounds.Intersects(renderer.bounds))
 			{
 				renderer.enabled = false;
+				voxelizerSceneObjects.Add(new VoxelizerObjectInstance(mesh.gameObject));
 				sceneObjects.Add(mesh.gameObject);
 			}
 		}
@@ -205,55 +208,9 @@ public class Voxelizer : MonoBehaviour
 		Graphics.SetRandomWriteTarget(1, voxelizedAlbedo);
 		Graphics.SetRandomWriteTarget(2, voxelizedMetallicSmoothness);
 
-		foreach(var voxelizedObject in sceneObjects)
+		foreach(var voxelizedObject in voxelizerSceneObjects)
 		{
-			var renderer = voxelizedObject.GetComponent<Renderer>();
-			var materials = renderer.materials;
-
-			Mesh mesh = null;
-
-			if(renderer is SkinnedMeshRenderer)
-			{
-				mesh = ((SkinnedMeshRenderer)renderer).sharedMesh;
-			}
-			else
-			{
-				mesh = voxelizedObject.GetComponent<MeshFilter>().mesh;
-			}
-			
-			int index = 0;
-
-			if(mesh)
-			{
-				foreach (var material in materials)
-				{
-					voxelizerMaterial.SetVector("_albedo", material.GetColor("_Color"));
-					voxelizerMaterial.SetFloat("_metallic", material.GetFloat("_Metallic"));
-					voxelizerMaterial.SetFloat("_smoothness", material.GetFloat("_Glossiness"));
-
-					Texture mainTex = material.GetTexture("_MainTex");
-					Texture metallicGlossMap = material.GetTexture("_MetallicGlossMap");
-
-					voxelizerMaterial.SetInt("_useAlbedoMap", mainTex != null ? 1 : 0);
-					voxelizerMaterial.SetInt("_useMetallicGlossMap", metallicGlossMap != null ? 1 : 0);
-
-					if (mainTex)
-					{
-						mainTex.filterMode = FilterMode.Point;
-						voxelizerMaterial.SetTexture("_mainAlbedo", mainTex);
-					}
-
-					if (metallicGlossMap)
-					{
-						metallicGlossMap.filterMode = FilterMode.Point;
-						voxelizerMaterial.SetTexture("_metallicGlossMap", metallicGlossMap);
-					}
-
-					voxelizerMaterial.SetPass(0);
-
-					Graphics.DrawMeshNow(mesh, voxelizedObject.transform.localToWorldMatrix, index++);
-				}
-			}			
+			voxelizedObject.Render(voxelizerMaterial);
 		}		
 
 		Graphics.ClearRandomWriteTargets();
@@ -299,5 +256,7 @@ public class Voxelizer : MonoBehaviour
 		if (argsBuffer != null)
 			argsBuffer.Release();
 		argsBuffer = null;
+
+		VoxelizerMeshLibray.release();
 	}
 }
